@@ -1,4 +1,4 @@
-import requests
+import requests # pyright: ignore[reportMissingModuleSource]
 from typing import Dict, Any
 
 # Initialize logger at the top so it's available everywhere
