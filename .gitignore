@@ -1,5 +1,10 @@
-client/.env
-client/*/__pycache__/
-client/__pycache__/
+.env
+*/__pycache__/
 dist/
 client.egg-info/
+client/windfire-security-client/
+client/windfire-security-client.log*
+client/config/__pycache__/
+client/logger/__pycache__/
+windfire-security-client.log*
+windfire-security-client/

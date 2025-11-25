@@ -1,22 +1,22 @@
+import os
 import requests # pyright: ignore[reportMissingModuleSource]
 from typing import Dict, Any
-
 # Initialize logger at the top so it's available everywhere
 # Use absolute imports from the client package root to make it usable as a module
-from client.logger.loggingFactory import logger_factory
-logger = logger_factory.get_logger('auth-client')
+from client.logger.loggerFactory import logger_factory
+logger = logger_factory.get_logger('authClient')
 
 # Load configuration
 # Use absolute imports from the client package root to make it usable as a module
-from client.config.config_reader import config
+#from client.config.config_reader import config
 
 class AuthClient:
     """Client for authentication and token verification"""
     def __init__(self):
-        self.auth_server_host = config.get('AUTHENTICATION_SERVER_HOST')
-        self.auth_server_port = config.get('AUTHENTICATION_SERVER_PORT')
-        self.enforce_https = config.get('ENFORCE_HTTPS')
-        self.verify_ssl_certs = config.get('VERIFY_SSL_CERTS')
+        self.auth_server_host = os.getenv('AUTHENTICATION_SERVER_HOST', 'raspberry01')
+        self.auth_server_port = os.getenv('AUTHENTICATION_SERVER_PORT', '8443')
+        self.enforce_https = os.getenv('ENFORCE_HTTPS', 'True') == 'True'
+        self.verify_ssl_certs = os.getenv('VERIFY_SSL_CERTS', 'True') == 'True'
         self.protocol = 'http'
         if self.enforce_https:
             self.protocol = 'https'
@@ -111,23 +111,3 @@ class AuthClient:
 ##### Initialize configuration reader instance #####
 ####################################################
 authClient = AuthClient()
-
-# Quick test when run as main module
-if __name__ == "__main__":
-    logger.info("Running authClient quick test ...")
-    logger.info(f"Environment: {config.get('ENVIRONMENT')}")
-    logger.info(f"Auth Server Host: {authClient.auth_server_host}")
-    logger.info(f"Auth Server Port: {authClient.auth_server_port}")
-    logger.info(f"ENFORCE_HTTPS: {authClient.enforce_https}")
-    logger.info(f"VERIFY_SSL_CERTS: {authClient.verify_ssl_certs}")
-    if authClient.enforce_https:
-        logger.info("HTTPS is enforced for communication with the authentication server.")
-    if not authClient.verify_ssl_certs:
-        logger.warning("SSL certificate verification is DISABLED. This is insecure and not recommended for production environments.")
-    # Quick test of authentication and verification
-    username = config.get('USERNAME')
-    password = config.get('PASSWORD')
-    service = config.get('SERVICE')
-    token = authClient.authenticate(username, password, service)
-    isTokenValid = authClient.verify(token, service)
-    logger.info(f"Token valid: {isTokenValid}")

@@ -1,14 +1,13 @@
-import logging
-import json
-from logging.handlers import TimedRotatingFileHandler
-from config.settings import settings
 import os
+import json
+import logging
+from logging.handlers import TimedRotatingFileHandler
 
 class LoggerFactory:
     level: int
     logger: logging.Logger
 
-    def __init__(self, level=logging.NOTSET):
+    def __init__(self, level=logging.DEBUG):
         # If LOG_LEVEL environment variable is set, map it to a logging level constant
         # If LOG_LEVEL environment variable is not set and DEFAULT_LOG_LEVEL is set in settings,
         # map DEFAULT_LOG_LEVEL to a logging level constant 
@@ -17,7 +16,7 @@ class LoggerFactory:
         # DEBUG = 10, INFO = 20, WARNING = 30, ERROR = 40, CRITICAL = 50
         level_str = ""
         env_level = os.getenv("LOG_LEVEL")
-        default_level = settings.get('DEFAULT_LOG_LEVEL')
+        default_level = os.getenv('DEFAULT_LOG_LEVEL')
         #print(f"LOG_LEVEL environment variable: {env_level}")
         #print(f"DEFAULT_LOG_LEVEL from settings: {default_level}")
         if env_level is not None and env_level != "":
@@ -51,8 +50,8 @@ class LoggerFactory:
         """Ensure logging is configured and return a logger."""
         self.logger = logging.getLogger(logger_name)
         file_handler = TimedRotatingFileHandler(
-            os.getenv("DEFAULT_LOG_FILE"), 
-            when=os.getenv("DEFAULT_LOG_ROTATION_WHEN"), 
+            "windfire-security-client.log", 
+            "midnight", 
             interval=1 / 86400, 
             backupCount=7
         )

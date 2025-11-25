@@ -1,6 +1,6 @@
 import os
 from typing import Any
-from dotenv import load_dotenv
+from dotenv import load_dotenv # pyright: ignore[reportMissingImports]
 
 # Initialize logger at the top so it's available everywhere
 # Use absolute imports from the client package root to make it usable as a module
