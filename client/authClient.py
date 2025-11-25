@@ -6,21 +6,48 @@ from typing import Dict, Any
 from client.logger.loggerFactory import logger_factory
 logger = logger_factory.get_logger('authClient')
 
-# Load configuration
-# Use absolute imports from the client package root to make it usable as a module
-#from client.config.config_reader import config
-
 class AuthClient:
     """Client for authentication and token verification"""
     def __init__(self):
         self.auth_server_host = os.getenv('AUTHENTICATION_SERVER_HOST', 'raspberry01')
         self.auth_server_port = os.getenv('AUTHENTICATION_SERVER_PORT', '8443')
-        self.enforce_https = os.getenv('ENFORCE_HTTPS', 'True') == 'True'
-        self.verify_ssl_certs = os.getenv('VERIFY_SSL_CERTS', 'True') == 'True'
+        # ##### START Handle ENFORCE_AUTH_SERVER_HTTPS as boolean properly #####
+        raw = os.getenv('ENFORCE_AUTH_SERVER_HTTPS', None)
+        if raw is None:
+            ENFORCE_AUTH_SERVER_HTTPS = True  # or your preferred default
+        else:
+            ENFORCE_AUTH_SERVER_HTTPS = raw.strip().lower() in ('1', 'true', 'yes', 'on')
+        self.enforce_https = ENFORCE_AUTH_SERVER_HTTPS
+        # ##### END Handle ENFORCE_AUTH_SERVER_HTTPS as boolean properly #####
+        # ***** START Handle VERIFY_AUTH_SERVER_SSL_CERTS as boolean properly *****
+        raw = os.getenv('VERIFY_AUTH_SERVER_SSL_CERTS', None)
+        if raw is None:
+            VERIFY_AUTH_SERVER_SSL_CERTS = False  # or your preferred default
+        else:
+            VERIFY_AUTH_SERVER_SSL_CERTS = raw.strip().lower() in ('1', 'true', 'yes', 'on')
+        self.verify_ssl_certs = VERIFY_AUTH_SERVER_SSL_CERTS
+        # ***** END Handle VERIFY_AUTH_SERVER_SSL_CERTS as boolean properly *****
         self.protocol = 'http'
         if self.enforce_https:
             self.protocol = 'https'
         self.url_base = f"{self.protocol}://{self.auth_server_host}:{self.auth_server_port}"
+        # Logging initialization details for debug purposes
+        logger.debug(f"authClient configuration initialized:")
+        logger.debug(f"     Protocol: {self.protocol}")
+        logger.debug(f"     Authentication Server Host: {self.auth_server_host}")
+        logger.debug(f"     Authentication Server Port: {self.auth_server_port}")
+        logger.debug(f"     Enforce HTTPS Authentication Server: {self.enforce_https}")
+        if self.enforce_https:
+            logger.debug("      --> HTTPS enforcement is enabled")
+        else:
+            logger.debug("      --> HTTPS enforcement is disabled")
+        logger.debug(f"     Verify SSL Certificates: {self.verify_ssl_certs}")
+        if self.verify_ssl_certs:
+            logger.debug("      --> SSL certificate verification is enabled")
+        else:
+            logger.debug("      --> SSL certificate verification is disabled")
+        logger.debug(f"     AuthClient initialized with base URL: {self.url_base}")
+  
     
     ##########################################################
     ##### Function to authenticate user and obtain token #####
