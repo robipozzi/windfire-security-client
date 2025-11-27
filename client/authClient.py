@@ -66,7 +66,7 @@ class AuthClient:
         """
         token = None
         logger.info(f"Authenticating user {username} for {service} service to obtain access token ...")
-        url = f"{self.url_base}/auth"
+        url = f"{self.url_base}/v1/security/auth"
         http_headers = {"Content-Type": "application/json"}
         logger.info(f"Calling endpoint {url} on Authentication Server ...")
         try:
@@ -107,10 +107,10 @@ class AuthClient:
             Verification response as a dictionary
         """
         logger.info(f"Verifying authentication token validity for {service} service ...")
-        url = f"{self.url_base}/verify"
+        url = f"{self.url_base}/v1/security/verify"
         http_headers = {"Content-Type": "application/json",
                         "Authorization": f"Bearer {token}"}
-        logger.info(f"Calling endpoint {url} on Authentication Server ...")
+        logger.info(f"Calling endpoint {url} on Authentication Server XXXX ...")
         verification_response = None
         try:
             response = requests.post(url, 
