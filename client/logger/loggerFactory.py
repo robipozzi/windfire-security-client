@@ -50,7 +50,7 @@ class LoggerFactory:
         """Ensure logging is configured and return a logger."""
         self.logger = logging.getLogger(logger_name)
         log_dir = os.getenv("HOME")
-        file_path = log_dir + "/windfire-security-client.log"
+        file_path = log_dir + "/logs/windfire-security-client.log"
         file_handler = TimedRotatingFileHandler(
             file_path, 
             "midnight", 
