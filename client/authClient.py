@@ -110,7 +110,7 @@ class AuthClient:
         url = f"{self.url_base}/v1/security/verify"
         http_headers = {"Content-Type": "application/json",
                         "Authorization": f"Bearer {token}"}
-        logger.info(f"Calling endpoint {url} on Authentication Server XXXX ...")
+        logger.info(f"Calling endpoint {url} on Authentication Server ...")
         verification_response = None
         try:
             response = requests.post(url, 
