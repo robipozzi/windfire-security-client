@@ -9,8 +9,20 @@ logger = logger_factory.get_logger('authClient')
 class AuthClient:
     """Client for authentication and token verification"""
     def __init__(self):
-        self.auth_server_host = os.getenv('AUTHENTICATION_SERVER_HOST', 'raspberry01')
-        self.auth_server_port = os.getenv('AUTHENTICATION_SERVER_PORT', '8443')
+        authServerHost = ""
+        authServerPort = ""
+        environment = os.getenv("ENVIRONMENT", "prod")
+        if environment == "dev":
+            logger.debug("environment is dev !!!")
+            authServerHost = "localhost"
+            authServerPort = 8443
+        elif environment == "prod":
+            logger.debug("environment is prod !!!")
+            authServerHost = "raspberry01"
+            authServerPort = 8443
+        
+        self.auth_server_host = authServerHost
+        self.auth_server_port = authServerPort
         # ##### START Handle ENFORCE_AUTH_SERVER_HTTPS as boolean properly #####
         raw = os.getenv('ENFORCE_AUTH_SERVER_HTTPS', None)
         if raw is None:
@@ -33,6 +45,7 @@ class AuthClient:
         self.url_base = f"{self.protocol}://{self.auth_server_host}:{self.auth_server_port}"
         # Logging initialization details for debug purposes
         logger.debug(f"authClient configuration initialized:")
+        logger.debug(f"     --> Environment: {environment}")
         logger.debug(f"     Protocol: {self.protocol}")
         logger.debug(f"     Authentication Server Host: {self.auth_server_host}")
         logger.debug(f"     Authentication Server Port: {self.auth_server_port}")
