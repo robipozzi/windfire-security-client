@@ -45,7 +45,7 @@ class AuthClient:
         self.url_base = f"{self.protocol}://{self.auth_server_host}:{self.auth_server_port}"
         # Logging initialization details for debug purposes
         logger.debug(f"authClient configuration initialized:")
-        logger.debug(f"     --> Environment: {environment}")
+        logger.debug(f"     Environment: {environment}")
         logger.debug(f"     Protocol: {self.protocol}")
         logger.debug(f"     Authentication Server Host: {self.auth_server_host}")
         logger.debug(f"     Authentication Server Port: {self.auth_server_port}")
