@@ -16,18 +16,7 @@ if __name__ == "__main__":
         logger.info("HTTPS is enforced for communication with the authentication server.")
     if not authClient.verify_ssl_certs:
         logger.warning("SSL certificate verification is DISABLED. This is insecure and not recommended for production environments.")
-    # Quick test of authentication and verification
-    username = os.getenv('USERNAME')
-    password = os.getenv('PASSWORD')
-    service = os.getenv('SERVICE')
-    token = authClient.authenticate(username, password, service)
-    isTokenValid = authClient.verify(token, service)
-    logger.info(f"Token valid: {isTokenValid}")
-
-
-
-
-
+    # ===== Quick test of authentication and verification ======
     # Test authentication
     username = os.getenv("USERNAME")
     password = os.getenv("PASSWORD")
@@ -35,9 +24,7 @@ if __name__ == "__main__":
     token = authClient.authenticate(username, password, service)
     if token:
         print(f"Authentication successful. Token: {token}")
-        
         # Test token verification
-        service = "testservice"
         is_valid = authClient.verify(token, service)
         if is_valid:
             print("Token verification successful.")
