@@ -23,6 +23,7 @@ class AuthClient:
         
         self.auth_server_host = authServerHost
         self.auth_server_port = authServerPort
+        self.ca_bundle_path = os.getenv("ROOT_CA_PATH")
         # ##### START Handle ENFORCE_AUTH_SERVER_HTTPS as boolean properly #####
         raw = os.getenv('ENFORCE_AUTH_SERVER_HTTPS', None)
         if raw is None:
@@ -31,14 +32,14 @@ class AuthClient:
             ENFORCE_AUTH_SERVER_HTTPS = raw.strip().lower() in ('1', 'true', 'yes', 'on')
         self.enforce_https = ENFORCE_AUTH_SERVER_HTTPS
         # ##### END Handle ENFORCE_AUTH_SERVER_HTTPS as boolean properly #####
-        # ***** START Handle VERIFY_AUTH_SERVER_SSL_CERTS as boolean properly *****
-        raw = os.getenv('VERIFY_AUTH_SERVER_SSL_CERTS', None)
+        # ***** START Handle VERIFY_SSL_CERTS as boolean properly *****
+        raw = os.getenv('VERIFY_SSL_CERTS', None)
         if raw is None:
-            VERIFY_AUTH_SERVER_SSL_CERTS = False  # or your preferred default
+            VERIFY_SSL_CERTS = False  # or your preferred default
         else:
-            VERIFY_AUTH_SERVER_SSL_CERTS = raw.strip().lower() in ('1', 'true', 'yes', 'on')
-        self.verify_ssl_certs = VERIFY_AUTH_SERVER_SSL_CERTS
-        # ***** END Handle VERIFY_AUTH_SERVER_SSL_CERTS as boolean properly *****
+            VERIFY_SSL_CERTS = raw.strip().lower() in ('1', 'true', 'yes', 'on')
+        self.verify_ssl_certs = VERIFY_SSL_CERTS
+        # ***** END Handle VERIFY_SSL_CERTS as boolean properly *****
         self.protocol = 'http'
         if self.enforce_https:
             self.protocol = 'https'
@@ -59,8 +60,8 @@ class AuthClient:
             logger.debug("      --> SSL certificate verification is enabled")
         else:
             logger.debug("      --> SSL certificate verification is disabled")
+        logger.debug(f"     Certificate Authority bundle path: {self.ca_bundle_path}")
         logger.debug(f"     AuthClient initialized with base URL: {self.url_base}")
-  
     
     ##########################################################
     ##### Function to authenticate user and obtain token #####
@@ -83,12 +84,23 @@ class AuthClient:
         http_headers = {"Content-Type": "application/json"}
         logger.info(f"Calling endpoint {url} on Authentication Server ...")
         try:
-            response = requests.post(url,
-                                    json={'username': username, 
-                                            'password': password, 
-                                            'service': service},
-                                    headers=http_headers,
-                                    verify=self.verify_ssl_certs)
+            logger.debug(f"VERIFY_SSL_CERTS environment variable is set to {self.verify_ssl_certs} ...")
+            if self.verify_ssl_certs:
+                logger.debug(f"Verify SSL certificate using CA certificate {self.ca_bundle_path}")
+                response = requests.post(url,
+                                        json={'username': username, 
+                                                'password': password, 
+                                                'service': service},
+                                        headers=http_headers,
+                                        verify=self.ca_bundle_path)
+            else:
+                logger.debug(f"SSL certificate will not be verified")
+                response = requests.post(url,
+                                        json={'username': username, 
+                                                'password': password, 
+                                                'service': service},
+                                        headers=http_headers,
+                                        verify=self.verify_ssl_certs)
             token = response.json()['access_token']
             logger.debug(f"Return Code: {response.status_code}\n")
             # ****** START - Uncomment for debug purposes in development ONLY ********
@@ -126,10 +138,19 @@ class AuthClient:
         logger.info(f"Calling endpoint {url} on Authentication Server ...")
         verification_response = None
         try:
-            response = requests.post(url, 
-                                     json={'service': service}, 
-                                     headers=http_headers,
-                                     verify=self.verify_ssl_certs)
+            logger.debug(f"VERIFY_SSL_CERTS environment variable is set to {self.verify_ssl_certs} ...")
+            if self.verify_ssl_certs:
+                logger.debug(f"Verify SSL certificate using CA certificate {self.ca_bundle_path}")
+                response = requests.post(url, 
+                                        json={'service': service}, 
+                                        headers=http_headers,
+                                        verify=self.ca_bundle_path)                
+            else:
+                logger.debug(f"SSL certificate will not be verified")
+                response = requests.post(url, 
+                                        json={'service': service}, 
+                                        headers=http_headers,
+                                        verify=self.verify_ssl_certs)
             verification_response = response.json()
             logger.debug(f"Return Code: {response.status_code}\n")
             # ****** START - Uncomment for debug purposes in development ONLY ********
