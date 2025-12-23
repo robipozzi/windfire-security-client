@@ -1,12 +1,14 @@
+#!/bin/bash
 source ./setenv.sh
-source ./commons.sh
 
-# ***** Main function to run Windfire Security client test application
+# ***** Run Windfire Security client test application
+
+# ===== MAIN FUNCTION =====
 main()
 {
-    echo ${blu}"#########################################################################"${end}
-    echo ${blu}"############### Windfire Security client test application ###############"${end}
-    echo ${blu}"#########################################################################"${end}
+    echo -e "${BLU}#########################################################################${RESET}"
+    echo -e "${BLU}############### Windfire Security client test application ###############${RESET}"
+    echo -e "${BLU}#########################################################################${RESET}"
     echo This script will run the following steps:
     echo    1. Create a Python Virtual Environment, if does not exist
     echo    2. Activate the Python Virtual Environment
@@ -17,12 +19,12 @@ main()
     run $1
 }
 
-# ***** Run Authentication client quick test
+# ===== Run Authentication client quick test =====
 run()
 {
     printSelectEnvironment $1
     getCredentials
-    echo ${cyn}Running authentication client in environment : $ENVIRONMENT${end}
+    echo -e "${CYAN}Running authentication client in environment : $ENVIRONMENT${RESET}"
     ENVIRONMENT=$ENVIRONMENT \
     USERNAME=$USERNAME \
     PASSWORD=$PASSWORD \
@@ -30,5 +32,5 @@ run()
     python3 testAuth.py
 }
 
-# ***** MAIN EXECUTION
+# ===== EXECUTION =====
 main $1
