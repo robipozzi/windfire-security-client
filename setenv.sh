@@ -14,7 +14,7 @@ coffee3="${coffee} ${coffee} ${coffee}"
 ##### Terminal Colors - END
 
 ###### Variable section - START
-PYTORCH_CLIENT_VIRTUAL_ENV=windfire-security-client
+PYTHON_CLIENT_VIRTUAL_ENV=windfire-security-client
 ENVIRONMENT=
 DEFAULT_USERNAME=windfire
 DEFAULT_AUTH_SERVICE_TEST=windfire-calendar-srv
