@@ -19,7 +19,7 @@ class AuthClient:
         elif environment == "prod":
             logger.debug("environment is prod !!!")
             authServerHost = "raspberry01"
-            authServerPort = 8443
+            authServerPort = 8444
         
         self.auth_server_host = authServerHost
         self.auth_server_port = authServerPort
