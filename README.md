@@ -1,4 +1,4 @@
-# windfire-security-client
+# Windfire Security Client
 
 A small, installable Python package (`client`) that other Windfire services embed to talk to the [windfire-security](../windfire-security) authentication server. It is the client-side counterpart to that server's `/v1/security/auth` and `/v1/security/verify` endpoints, and is not meant to be run standalone in production — it's consumed as a dependency by other Windfire services (e.g. `windfire-calendar`).
 
