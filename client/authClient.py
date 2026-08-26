@@ -101,19 +101,23 @@ class AuthClient:
                                                 'service': service},
                                         headers=http_headers,
                                         verify=self.verify_ssl_certs)
-            token = response.json()['access_token']
             logger.debug(f"Return Code: {response.status_code}\n")
-            # ****** START - Uncomment for debug purposes in development ONLY ********
-            #logger.debug(f"Response Body: {response.__dict__}\n")
-            #logger.debug(f"Access Token: {token}\n")
-            # ****** END - Uncomment for debug purposes in development ONLY ********
-            if not token is None:
-                logger.info("Authentication successful !!!")
-        except Exception:
+            if response.status_code == 200:
+                token = response.json().get('access_token')
+                # ****** START - Uncomment for debug purposes in development ONLY ********
+                #logger.debug(f"Response Body: {response.__dict__}\n")
+                #logger.debug(f"Access Token: {token}\n")
+                # ****** END - Uncomment for debug purposes in development ONLY ********
+                if not token is None:
+                    logger.info("Authentication successful !!!")
+                else:
+                    logger.error("Authentication response missing access_token")
+            else:
+                logger.error(f"Authentication failed with status code {response.status_code}")
+                logger.debug(f"Response body: {response.text}\n")
+        except Exception as e:
             token = None
-            logger.error("Authentication failed")
-            logger.debug(f"Response: {response.__dict__} \n")
-            logger.debug("POST Status Code:", response.status_code) 
+            logger.error(f"Authentication failed: {e}")
         return token
     
     #############################################
@@ -161,11 +165,9 @@ class AuthClient:
                 logger.info("Token verification successful !!!")
             else:
                 logger.warning("Token verification failed !!!")
-        except Exception:
+        except Exception as e:
             verification_response = None
-            logger.error("Token verification failed")
-            logger.debug(f"Response: {response.__dict__} \n")
-            logger.debug("POST Status Code:", response.status_code) 
+            logger.error(f"Token verification failed: {e}")
         return True if verification_response and response.status_code == 200 else False
 
 ####################################################
