@@ -36,7 +36,8 @@ Package metadata lives in `pyproject.toml` (name `client`, version `1.0.0`, sing
 The entire package is `client/authClient.py`, exposing a module-level singleton `authClient = AuthClient()` — callers import and use that instance directly rather than instantiating `AuthClient()` themselves.
 
 `AuthClient.__init__` resolves the target auth server purely from environment variables, no config file:
-- `ENVIRONMENT` (`dev` → `localhost:8443`, `prod` or anything else → `raspberry01:8443`) — there is no `test`/`staging` case in the code despite `common.sh`'s environment-selection menu offering "Test" as option 2; passing that maps to the `prod` host.
+- `ENVIRONMENT` (default `prod`; `dev` → `localhost:8443`, `prod` → `raspberry01:8444`) — there is no `test` case in the mapping despite `common.sh`'s environment-selection menu offering "Test" as option 2; `test` (or any other value) leaves host/port empty unless overridden.
+- `KEYCLOAK_SERVER_HOST` / `KEYCLOAK_SERVER_PORT` — when set (non-empty), override the host/port resolved from `ENVIRONMENT` (port is cast to `int`; an invalid port is logged and ignored). Consumers such as `windfire-calendar` use these to select the auth server explicitly; the `ENVIRONMENT` mapping remains the fallback (e.g. for `run-auth-client.sh`).
 - `ENFORCE_AUTH_SERVER_HTTPS` (default `true`) — selects `https` vs `http` for `url_base`.
 - `VERIFY_SSL_CERTS` (default `false`) — whether to verify against `ROOT_CA_PATH`, or disable TLS verification entirely.
 - `ROOT_CA_PATH` — path to the Windfire Root CA bundle (produced by `windfire-security`'s `ssl/createRootCA.sh`), used as `requests`' `verify=` argument when `VERIFY_SSL_CERTS` is true.

@@ -20,7 +20,21 @@ class AuthClient:
             logger.debug("environment is prod !!!")
             authServerHost = "raspberry01"
             authServerPort = 8444
-        
+        # ##### START Allow KEYCLOAK_SERVER_HOST / KEYCLOAK_SERVER_PORT to override the ENVIRONMENT mapping #####
+        authServerSource = f"ENVIRONMENT mapping ({environment})"
+        overrideHost = os.getenv("KEYCLOAK_SERVER_HOST", "").strip()
+        overridePort = os.getenv("KEYCLOAK_SERVER_PORT", "").strip()
+        if overrideHost:
+            authServerHost = overrideHost
+            authServerSource = "KEYCLOAK_SERVER_HOST/KEYCLOAK_SERVER_PORT environment variables"
+        if overridePort:
+            try:
+                authServerPort = int(overridePort)
+                authServerSource = "KEYCLOAK_SERVER_HOST/KEYCLOAK_SERVER_PORT environment variables"
+            except ValueError:
+                logger.error(f"Invalid KEYCLOAK_SERVER_PORT '{overridePort}', keeping port {authServerPort}")
+        # ##### END Allow KEYCLOAK_SERVER_HOST / KEYCLOAK_SERVER_PORT to override the ENVIRONMENT mapping #####
+
         self.auth_server_host = authServerHost
         self.auth_server_port = authServerPort
         self.ca_bundle_path = os.getenv("ROOT_CA_PATH")
@@ -50,6 +64,8 @@ class AuthClient:
         logger.debug(f"     Protocol: {self.protocol}")
         logger.debug(f"     Authentication Server Host: {self.auth_server_host}")
         logger.debug(f"     Authentication Server Port: {self.auth_server_port}")
+        logger.debug(f"     Authentication Server Host/Port source: {authServerSource}")
+        logger.debug(f"     Authentication Server URL: {self.url_base}")
         logger.debug(f"     Enforce HTTPS Authentication Server: {self.enforce_https}")
         if self.enforce_https:
             logger.debug("      --> HTTPS enforcement is enabled")
