@@ -37,13 +37,15 @@ The entire package is `client/authClient.py`, exposing a module-level singleton 
 
 `AuthClient.__init__` resolves the target auth server purely from environment variables, no config file:
 - `ENVIRONMENT` (default `prod`; `dev` → `localhost:8443`, `prod` → `raspberry01:8444`) — there is no `test` case in the mapping despite `common.sh`'s environment-selection menu offering "Test" as option 2; `test` (or any other value) leaves host/port empty unless overridden.
-- `KEYCLOAK_SERVER_HOST` / `KEYCLOAK_SERVER_PORT` — when set (non-empty), override the host/port resolved from `ENVIRONMENT` (port is cast to `int`; an invalid port is logged and ignored). Consumers such as `windfire-calendar` use these to select the auth server explicitly; the `ENVIRONMENT` mapping remains the fallback (e.g. for `run-auth-client.sh`).
+- `WINDFIRE_SECURITY_HOST` / `WINDFIRE_SECURITY_PORT` — when set (non-empty), override the host/port resolved from `ENVIRONMENT` (port is cast to `int`; an invalid port is logged and ignored). Consumers such as `windfire-calendar` use these to select the auth server explicitly; the `ENVIRONMENT` mapping remains the fallback (e.g. for `run-auth-client.sh`).
 - `ENFORCE_AUTH_SERVER_HTTPS` (default `true`) — selects `https` vs `http` for `url_base`.
 - `VERIFY_SSL_CERTS` (default `false`) — whether to verify against `ROOT_CA_PATH`, or disable TLS verification entirely.
 - `ROOT_CA_PATH` — path to the Windfire Root CA bundle (produced by `windfire-security`'s `ssl/createRootCA.sh`), used as `requests`' `verify=` argument when `VERIFY_SSL_CERTS` is true.
 
-Two methods, both POSTing JSON to the auth server and returning a simplified result rather than raising on failure (callers check for `None`/`False`, not exceptions):
+Two main methods, both POSTing JSON to the auth server and returning a simplified result rather than raising on failure (callers check for `None`/`False`, not exceptions):
 - `authenticate(username, password, service) -> token | None` — calls `POST /v1/security/auth`, returns the `access_token` string or `None`.
 - `verify(token, service, method='local') -> bool` — calls `POST /v1/security/verify` with the token as a Bearer header, returns `True` only on HTTP 200. Note: the `method` parameter is accepted but not actually forwarded to the server request — verification method is entirely determined server-side.
+
+`verify()` wraps `verify_or_raise(token, service) -> bool`, which returns `False` only on 401/403 and raises `AuthServerError` when the server gives no usable answer (connection/TLS error, other status, 200 without a JSON body). `windfire-calendar` calls it to return 503 instead of a misleading 401.
 
 Logging: `client/logger/loggerFactory.py` mirrors the logger used in `windfire-security` (same `ColorFormatter`, `LOG_LEVEL`/`DEFAULT_LOG_LEVEL` env resolution) but hardcodes its file handler to `$HOME/logs/windfire-security-client.log` — that directory must exist on the host before any client code runs, or the `TimedRotatingFileHandler` will fail to initialize. Always get loggers via `logger_factory.get_logger(<name>)`, never `logging.getLogger` directly.
