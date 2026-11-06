@@ -74,8 +74,6 @@ The username defaults to `windfire` and the service to `windfire-calendar-srv` (
 
 Related scripts: `createPythonVenv.sh`, `activatePythonVenv.sh`, `deactivatePythonVenv.sh` manage that venv (its name, `windfire-security-client`, is set in `common.sh` as `PYTHON_CLIENT_VIRTUAL_ENV`); `installPrereqs.sh` installs the dependencies pinned in `requirements.txt`; `common.sh` holds shared shell variables/functions (environment selection, credential prompts, terminal colors).
 
-> `requirements.txt` also lists packages this client doesn't use (Google Calendar API libraries, FastAPI, uvicorn, etc.), apparently carried over from another Windfire service. The package itself only needs `requests`.
-
 ## Building/publishing the package
 
 ```bash

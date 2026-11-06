@@ -9,7 +9,7 @@ main()
     echo ""
 }
 
-# ***** Install Python prerequisites for Google Calendar API
+# ***** Install Python prerequisites
 installPythonModules()
 {
     pip3 install -r requirements.txt

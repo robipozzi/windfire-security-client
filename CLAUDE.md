@@ -21,7 +21,7 @@ pip3 install -e $HOME/dev/windfire-security-client
 
 This creates/activates the `windfire-security-client` venv, installs prerequisites, and runs `testAuth.py`, which authenticates against the real auth server for the given environment and then verifies the resulting token. There is no automated/unit test suite — this is the only test entry point, and it requires a live `windfire-security` auth server to be reachable at the resolved host:port.
 
-`createPythonVenv.sh` / `activatePythonVenv.sh` / `deactivatePythonVenv.sh` manage that venv (name defined in `common.sh` as `PYTHON_CLIENT_VIRTUAL_ENV`). `installPrereqs.sh` installs the pinned dependencies — note it currently also installs Google Calendar API packages (`google-auth-oauthlib`, `google-api-python-client`, etc.) that this package doesn't use; if editing dependencies, check whether that's cruft from copy-pasting another Windfire service's script before assuming it's required.
+`createPythonVenv.sh` / `activatePythonVenv.sh` / `deactivatePythonVenv.sh` manage that venv (name defined in `common.sh` as `PYTHON_CLIENT_VIRTUAL_ENV`). `installPrereqs.sh` installs the dependencies pinned in `requirements.txt`, which holds only `requests`, the package's single runtime dependency.
 
 ## Building/publishing the package
 
