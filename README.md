@@ -1,4 +1,5 @@
 # Windfire Security Client
+[![CI](https://github.com/robipozzi/windfire-security-client/actions/workflows/ci.yml/badge.svg)](https://github.com/robipozzi/windfire-security-client/actions/workflows/ci.yml)
 
 A small, installable Python package (`client`) that other Windfire services embed to talk to the [windfire-security](../windfire-security) authentication server. It is the client-side counterpart to that server's `/v1/security/auth` and `/v1/security/verify` endpoints, and is not meant to be run standalone in production — it's consumed as a dependency by other Windfire services (e.g. `windfire-calendar`).
 
@@ -71,9 +72,7 @@ This will:
 
 The username defaults to `windfire` and the service to `windfire-calendar-srv` (both set in `common.sh`). Note that the **Test** option sets `ENVIRONMENT=test`, which has no host mapping in `authClient.py` — to use it, also export `WINDFIRE_SECURITY_HOST` / `WINDFIRE_SECURITY_PORT` before running the script.
 
-Related scripts: `createPythonVenv.sh`, `activatePythonVenv.sh`, `deactivatePythonVenv.sh` manage that venv (its name, `windfire-security-client`, is set in `common.sh` as `PYTHON_CLIENT_VIRTUAL_ENV`); `installPrereqs.sh` installs pinned dependencies; `common.sh` holds shared shell variables/functions (environment selection, credential prompts, terminal colors).
-
-> `installPrereqs.sh` also installs packages this client doesn't use (Google Calendar API libraries, FastAPI, uvicorn, etc.), apparently carried over from another Windfire service. The package itself only needs `requests`.
+Related scripts: `createPythonVenv.sh`, `activatePythonVenv.sh`, `deactivatePythonVenv.sh` manage that venv (its name, `windfire-security-client`, is set in `common.sh` as `PYTHON_CLIENT_VIRTUAL_ENV`); `installPrereqs.sh` installs the dependencies pinned in `requirements.txt`; `common.sh` holds shared shell variables/functions (environment selection, credential prompts, terminal colors).
 
 ## Building/publishing the package
 
@@ -88,6 +87,9 @@ Package metadata lives in [pyproject.toml](pyproject.toml) (name `client`, versi
 ## Project structure
 
 ```
+.github/
+├── dependabot.yml          # weekly dependency update checks
+└── workflows/ci.yml        # CI workflow: compile, dependency audit, dependency review
 client/
 ├── authClient.py           # AuthClient class + module-level `authClient` singleton
 └── logger/
@@ -95,11 +97,30 @@ client/
 testAuth.py                 # smoke test: authenticate then verify
 run-auth-client.sh          # end-to-end runner (venv + prereqs + smoke test)
 createPythonVenv.sh / activatePythonVenv.sh / deactivatePythonVenv.sh
-installPrereqs.sh           # installs pinned dependencies
+installPrereqs.sh           # installs the dependencies pinned in requirements.txt
+requirements.txt            # pinned dependencies of the smoke test environment
 createModule.sh             # builds the distributable package inside the venv
 common.sh                   # shared shell variables/functions
 pyproject.toml              # package metadata
 ```
+
+## CI and dependency monitoring
+
+The CI badge at the top of this page shows the result of the latest [CI workflow](.github/workflows/ci.yml) run on `main`; click it to see all runs. The workflow runs on every pull request and on every push to `main`:
+
+- **Python**, on the same Python version as raspberry01 (3.11.2): installs `requirements.txt`, compiles the sources with `python -m compileall`, and audits the dependencies with `pip-audit`. It does not run `testAuth.py`, which needs a live auth server.
+- **Dependency review**, on pull requests only: fails if the pull request adds a dependency with a known vulnerability of high or critical severity.
+
+[Dependabot](.github/dependabot.yml) checks `requirements.txt`, `pyproject.toml` and the GitHub Actions in the workflow every week. It groups minor and patch updates into one pull request for Python and one for GitHub Actions, and major updates get their own pull requests. Each of the two has at most 5 version update pull requests open at a time.
+
+To read the alerts, open **Security → Dependabot** on GitHub (https://github.com/robipozzi/windfire-security-client/security/dependabot). You need access to the repository's security alerts. Each alert shows the affected package and file, the severity, the advisory and the first patched version. To fix one, merge the Dependabot pull request or change the pin in `requirements.txt`. From the terminal:
+
+```bash
+gh api 'repos/robipozzi/windfire-security-client/dependabot/alerts?state=open' \
+  --jq '.[] | [.security_advisory.severity, .dependency.package.name, .security_vulnerability.first_patched_version.identifier] | @tsv'
+```
+
+Dependabot cannot read versions set in shell scripts, so add new pins to `requirements.txt`, not to `installPrereqs.sh`.
 
 ## Notes
 
