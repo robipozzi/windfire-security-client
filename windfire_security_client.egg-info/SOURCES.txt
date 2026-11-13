@@ -1,0 +1,11 @@
+README.md
+pyproject.toml
+client/__init__.py
+client/authClient.py
+client/logger/__init__.py
+client/logger/loggerFactory.py
+windfire_security_client.egg-info/PKG-INFO
+windfire_security_client.egg-info/SOURCES.txt
+windfire_security_client.egg-info/dependency_links.txt
+windfire_security_client.egg-info/requires.txt
+windfire_security_client.egg-info/top_level.txt

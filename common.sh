@@ -18,7 +18,10 @@ PYTHON_CLIENT_VIRTUAL_ENV=windfire-security-client
 ENVIRONMENT=
 DEFAULT_USERNAME=windfire
 DEFAULT_AUTH_SERVICE_TEST=windfire-calendar-srv
-VERIFY_SSL_CERTS=false
+VERIFY_SSL_CERTS=true
+# Windfire Root CA used to verify the Authentication Server certificate (same location as windfire-security's test scripts)
+WINDFIRE_ROOT_CA_CERTIFICATE="WindfireRootCA.crt"
+WINDFIRE_DEFAULT_TRUSTSTORE_DIR=$HOME/opt/windfire/ssl/truststore
 ###### Variable section - END
 
 ###### Function section - START

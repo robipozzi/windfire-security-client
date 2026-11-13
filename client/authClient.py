@@ -6,7 +6,8 @@ from typing import Dict, Any
 from client.logger.loggerFactory import logger_factory
 logger = logger_factory.get_logger('authClient')
 
-VERIFY_TIMEOUT_SECONDS = 10
+# (connect, read) timeout applied to every request sent to the Authentication Server
+REQUEST_TIMEOUT_SECONDS = (3, 10)
 
 class AuthServerError(Exception):
     """The Authentication Server could not give an answer about a token (unreachable, TLS failure, unexpected response)"""
@@ -54,10 +55,13 @@ class AuthClient:
         # ***** START Handle VERIFY_SSL_CERTS as boolean properly *****
         raw = os.getenv('VERIFY_SSL_CERTS', None)
         if raw is None:
-            VERIFY_SSL_CERTS = False  # or your preferred default
+            VERIFY_SSL_CERTS = True  # secure by default: verify TLS certificates against ROOT_CA_PATH
         else:
             VERIFY_SSL_CERTS = raw.strip().lower() in ('1', 'true', 'yes', 'on')
         self.verify_ssl_certs = VERIFY_SSL_CERTS
+        if not self.verify_ssl_certs:
+            # __init__ runs once for the module-level singleton, so this warning is logged once
+            logger.warning(f"VERIFY_SSL_CERTS is set to '{raw}': TLS certificate verification of the Authentication Server is DISABLED")
         # ***** END Handle VERIFY_SSL_CERTS as boolean properly *****
         self.protocol = 'http'
         if self.enforce_https:
@@ -83,7 +87,27 @@ class AuthClient:
             logger.debug("      --> SSL certificate verification is disabled")
         logger.debug(f"     Certificate Authority bundle path: {self.ca_bundle_path}")
         logger.debug(f"     AuthClient initialized with base URL: {self.url_base}")
-    
+
+    def _tls_config_ok(self) -> bool:
+        """Return False (and log why) when certificate verification is on but ROOT_CA_PATH is unusable"""
+        if not self.verify_ssl_certs:
+            return True
+        if not self.ca_bundle_path:
+            logger.error("VERIFY_SSL_CERTS is enabled but ROOT_CA_PATH is not set: request to the Authentication Server not sent")
+            return False
+        if not os.path.isfile(self.ca_bundle_path):
+            logger.error(f"VERIFY_SSL_CERTS is enabled but ROOT_CA_PATH '{self.ca_bundle_path}' is not an existing file: request to the Authentication Server not sent")
+            return False
+        return True
+
+    def _requests_verify(self):
+        """Value of the requests verify= argument: the Root CA bundle, or False when verification is disabled"""
+        if self.verify_ssl_certs:
+            logger.debug(f"Verify SSL certificate using CA certificate {self.ca_bundle_path}")
+            return self.ca_bundle_path
+        logger.debug("SSL certificate will not be verified")
+        return False
+
     ##########################################################
     ##### Function to authenticate user and obtain token #####
     ##########################################################
@@ -99,6 +123,8 @@ class AuthClient:
         Returns:
             Access token if authentication is successful, None otherwise
         """
+        if not self._tls_config_ok():
+            return None
         token = None
         logger.info(f"Authenticating user {username} for {service} service to obtain access token ...")
         url = f"{self.url_base}/v1/security/auth"
@@ -106,22 +132,13 @@ class AuthClient:
         logger.info(f"Calling endpoint {url} on Authentication Server ...")
         try:
             logger.debug(f"VERIFY_SSL_CERTS environment variable is set to {self.verify_ssl_certs} ...")
-            if self.verify_ssl_certs:
-                logger.debug(f"Verify SSL certificate using CA certificate {self.ca_bundle_path}")
-                response = requests.post(url,
-                                        json={'username': username, 
-                                                'password': password, 
-                                                'service': service},
-                                        headers=http_headers,
-                                        verify=self.ca_bundle_path)
-            else:
-                logger.debug(f"SSL certificate will not be verified")
-                response = requests.post(url,
-                                        json={'username': username, 
-                                                'password': password, 
-                                                'service': service},
-                                        headers=http_headers,
-                                        verify=self.verify_ssl_certs)
+            response = requests.post(url,
+                                    json={'username': username,
+                                            'password': password,
+                                            'service': service},
+                                    headers=http_headers,
+                                    verify=self._requests_verify(),
+                                    timeout=REQUEST_TIMEOUT_SECONDS)
             logger.debug(f"Return Code: {response.status_code}\n")
             if response.status_code == 200:
                 token = response.json().get('access_token')
@@ -136,6 +153,13 @@ class AuthClient:
             else:
                 logger.error(f"Authentication failed with status code {response.status_code}")
                 logger.debug(f"Response body: {response.text}\n")
+        # Timeout first: ConnectTimeout is both a Timeout and a ConnectionError
+        except requests.Timeout as e:
+            token = None
+            logger.error(f"Authentication failed: timeout calling {url}: {e}")
+        except requests.ConnectionError as e:
+            token = None
+            logger.error(f"Authentication failed: cannot connect to {url}: {e}")
         except Exception as e:
             token = None
             logger.error(f"Authentication failed: {e}")
@@ -159,6 +183,8 @@ class AuthClient:
         Returns:
             True if the token is valid, False otherwise
         """
+        if not self._tls_config_ok():
+            return False
         try:
             return self.verify_or_raise(token, service)
         except AuthServerError as e:
@@ -179,22 +205,27 @@ class AuthClient:
         Raises:
             AuthServerError: If the Authentication Server gives no usable answer
         """
+        if not self._tls_config_ok():
+            raise AuthServerError("TLS verification is enabled but ROOT_CA_PATH is not an existing file: request not sent")
         logger.info(f"Verifying authentication token validity for {service} service ...")
         url = f"{self.url_base}/v1/security/verify"
         http_headers = {"Content-Type": "application/json",
                         "Authorization": f"Bearer {token}"}
         logger.info(f"Calling endpoint {url} on Authentication Server ...")
         logger.debug(f"VERIFY_SSL_CERTS environment variable is set to {self.verify_ssl_certs} ...")
-        if self.verify_ssl_certs:
-            logger.debug(f"Verify SSL certificate using CA certificate {self.ca_bundle_path}")
-        else:
-            logger.debug(f"SSL certificate will not be verified")
         try:
             response = requests.post(url,
                                     json={'service': service},
                                     headers=http_headers,
-                                    verify=self.ca_bundle_path if self.verify_ssl_certs else False,
-                                    timeout=VERIFY_TIMEOUT_SECONDS)
+                                    verify=self._requests_verify(),
+                                    timeout=REQUEST_TIMEOUT_SECONDS)
+        # Timeout first: ConnectTimeout is both a Timeout and a ConnectionError
+        except requests.Timeout as e:
+            logger.error(f"Timeout calling {url}: {e}")
+            raise AuthServerError(f"Timeout calling Authentication Server at {url}: {e}") from e
+        except requests.ConnectionError as e:
+            logger.error(f"Cannot connect to {url}: {e}")
+            raise AuthServerError(f"Cannot reach Authentication Server at {url}: {e}") from e
         except Exception as e:
             raise AuthServerError(f"Cannot reach Authentication Server at {url}: {e}") from e
         logger.debug(f"Return Code: {response.status_code}\n")

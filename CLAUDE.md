@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repository is
 
-`windfire-security-client` is a small, installable Python package (`client`) that other Windfire services embed to talk to the [windfire-security](../windfire-security) authentication server — it is the client-side counterpart to that repo's `/v1/security/auth` and `/v1/security/verify` endpoints. It is not run standalone; it's consumed via editable pip install:
+`windfire-security-client` is a small, installable Python package (distribution `windfire-security-client`, import package `client`) that other Windfire services embed to talk to the [windfire-security](../windfire-security) authentication server — it is the client-side counterpart to that repo's `/v1/security/auth` and `/v1/security/verify` endpoints. It is not run standalone; it's consumed via editable pip install:
 
 ```bash
 pip3 install -e $HOME/dev/windfire-security-client
@@ -29,7 +29,9 @@ This creates/activates the `windfire-security-client` venv, installs prerequisit
 ./createModule.sh    # pip install build; python3 -m build -> produces dist/*.whl and dist/*.tar.gz
 ```
 
-Package metadata lives in `pyproject.toml` (name `client`, version `1.0.1`, single runtime dependency `requests`).
+Package metadata lives in `pyproject.toml` (distribution `windfire-security-client`, version `1.1.0`, single runtime dependency `requests`). The import package is still `client`, so consumers keep `from client.authClient import authClient`. The wheel is `dist/windfire_security_client-1.1.0-py3-none-any.whl`. Before 1.1.0 the distribution was named `client` (wheels `client-1.0.x-py3-none-any.whl`): environments that have it installed should `pip uninstall client` before installing the new one.
+
+`run-auth-client.sh` passes `VERIFY_SSL_CERTS=true` (from `common.sh`) and `ROOT_CA_PATH=$HOME/opt/windfire/ssl/truststore/WindfireRootCA.crt`, the same Root CA path `windfire-security`'s test scripts use.
 
 ## Architecture
 
@@ -39,8 +41,10 @@ The entire package is `client/authClient.py`, exposing a module-level singleton 
 - `ENVIRONMENT` (default `prod`; `dev` → `localhost:8443`, `prod` → `raspberry01:8444`) — there is no `test` case in the mapping despite `common.sh`'s environment-selection menu offering "Test" as option 2; `test` (or any other value) leaves host/port empty unless overridden.
 - `WINDFIRE_SECURITY_HOST` / `WINDFIRE_SECURITY_PORT` — when set (non-empty), override the host/port resolved from `ENVIRONMENT` (port is cast to `int`; an invalid port is logged and ignored). Consumers such as `windfire-calendar` use these to select the auth server explicitly; the `ENVIRONMENT` mapping remains the fallback (e.g. for `run-auth-client.sh`).
 - `ENFORCE_AUTH_SERVER_HTTPS` (default `true`) — selects `https` vs `http` for `url_base`.
-- `VERIFY_SSL_CERTS` (default `false`) — whether to verify against `ROOT_CA_PATH`, or disable TLS verification entirely.
-- `ROOT_CA_PATH` — path to the Windfire Root CA bundle (produced by `windfire-security`'s `ssl/createRootCA.sh`), used as `requests`' `verify=` argument when `VERIFY_SSL_CERTS` is true.
+- `VERIFY_SSL_CERTS` (default `true`, secure by default) — whether to verify against `ROOT_CA_PATH`, or disable TLS verification entirely. An explicit false value logs a warning once, in `__init__`.
+- `ROOT_CA_PATH` — path to the Windfire Root CA bundle (produced by `windfire-security`'s `ssl/createRootCA.sh`), used as `requests`' `verify=` argument when `VERIFY_SSL_CERTS` is true. `__init__` never raises, because the singleton is built at import time. Instead `_tls_config_ok()` runs at the start of `authenticate()`, `verify()` and `verify_or_raise()`: when verification is on and `ROOT_CA_PATH` is unset or not an existing file, it logs an error naming `ROOT_CA_PATH` and no request is sent (`None` / `False` / `AuthServerError`).
+
+The `verify=` argument is built only in `_requests_verify()`. Every request uses `REQUEST_TIMEOUT_SECONDS = (3, 10)` (connect, read). `requests.Timeout` and `requests.ConnectionError` are logged and become `None` / `False`; `verify_or_raise()` raises `AuthServerError` for them.
 
 Two main methods, both POSTing JSON to the auth server and returning a simplified result rather than raising on failure (callers check for `None`/`False`, not exceptions):
 - `authenticate(username, password, service) -> token | None` — calls `POST /v1/security/auth`, returns the `access_token` string or `None`.
