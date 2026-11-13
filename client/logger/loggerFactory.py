@@ -49,8 +49,11 @@ class LoggerFactory:
     def get_logger(self, logger_name):
         """Ensure logging is configured and return a logger."""
         self.logger = logging.getLogger(logger_name)
-        log_dir = os.getenv("HOME")
-        file_path = log_dir + "/logs/windfire-security-client.log"
+        # WINDFIRE_SECURITY_CLIENT_LOG_DIR lets sandboxed services (e.g. systemd ProtectHome=read-only)
+        # point the log file to a writable directory; default is $HOME/logs
+        log_dir = os.getenv("WINDFIRE_SECURITY_CLIENT_LOG_DIR") or os.path.join(os.path.expanduser("~"), "logs")
+        os.makedirs(log_dir, exist_ok=True)
+        file_path = os.path.join(log_dir, "windfire-security-client.log")
         file_handler = TimedRotatingFileHandler(
             file_path, 
             "midnight", 
