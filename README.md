@@ -8,7 +8,7 @@ A small, installable Python package (`client`) that other Windfire services embe
 - `authenticate(username, password, service)` — obtains an access token from the auth server.
 - `verify(token, service)` — checks whether a token is still valid for a given service.
 - Environment-driven configuration (dev/prod host resolution, explicit host/port override, HTTPS enforcement, TLS certificate verification against a Windfire Root CA).
-- Color-coded logging to console and to a rotating file (`$HOME/logs/windfire-security-client.log`), shared with the same logger style used in `windfire-security`.
+- Color-coded logging to console and to a rotating file (`windfire-security-client.log` in `$WINDFIRE_SECURITY_CLIENT_LOG_DIR`, default `$HOME/logs`), shared with the same logger style used in `windfire-security`.
 
 ## Installation
 
@@ -124,6 +124,6 @@ Dependabot cannot read versions set in shell scripts, so add new pins to `requir
 
 ## Notes
 
-- Logging requires `$HOME/logs/` to exist on the host beforehand — the `TimedRotatingFileHandler` will fail to initialize otherwise.
+- The log directory is created if missing and must be writable: services sandboxed by systemd (`ProtectHome=read-only`) must set `WINDFIRE_SECURITY_CLIENT_LOG_DIR` to a directory listed in `ReadWritePaths`, otherwise importing the client fails with `Read-only file system`.
 - When changing the public API (`authClient.authenticate()` / `authClient.verify()`), check consumers in sibling repos (e.g. `windfire-calendar`), which import `from client.authClient import authClient` directly.
 - See [CLAUDE.md](CLAUDE.md) for more detailed internal/architecture notes.
