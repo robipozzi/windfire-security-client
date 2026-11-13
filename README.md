@@ -1,7 +1,7 @@
 # Windfire Security Client
 [![CI](https://github.com/robipozzi/windfire-security-client/actions/workflows/ci.yml/badge.svg)](https://github.com/robipozzi/windfire-security-client/actions/workflows/ci.yml)
 
-A small, installable Python package (`client`) that other Windfire services embed to talk to the [windfire-security](../windfire-security) authentication server. It is the client-side counterpart to that server's `/v1/security/auth` and `/v1/security/verify` endpoints, and is not meant to be run standalone in production — it's consumed as a dependency by other Windfire services (e.g. `windfire-calendar`).
+A small, installable Python package (distribution `windfire-security-client`, import package `client`) that other Windfire services embed to talk to the [windfire-security](../windfire-security) authentication server. It is the client-side counterpart to that server's `/v1/security/auth` and `/v1/security/verify` endpoints, and is not meant to be run standalone in production — it's consumed as a dependency by other Windfire services (e.g. `windfire-calendar`).
 
 ## Features
 
@@ -17,6 +17,14 @@ This package is meant to be installed as an editable dependency by the service t
 ```bash
 pip3 install -e $HOME/dev/windfire-security-client
 ```
+
+or from the wheel built by `./createModule.sh`:
+
+```bash
+pip3 install windfire_security_client-1.1.0-py3-none-any.whl
+```
+
+The import package is still `client` (`from client.authClient import authClient`). Before 1.1.0 the distribution was named `client`: in an environment that has the old one installed, run `pip3 uninstall client` first, so that two distributions don't both own the `client/` package.
 
 ## Usage
 
@@ -35,7 +43,13 @@ if token:
 - `authenticate()` calls `POST /v1/security/auth` and returns the `access_token` string, or `None`.
 - `verify()` calls `POST /v1/security/verify` with the token as a Bearer header and returns `True` only on HTTP 200, otherwise `False`. Its optional `method` argument (default `'local'`) is currently not forwarded to the server — the verification method is decided server-side.
 
-Use `verify_or_raise(token, service)` when a server should not blame the token for an auth server problem (`windfire-calendar` does, and answers `503`). It returns `True` for a valid token and `False` on 401/403, and raises `AuthServerError` on connection or TLS errors, on any other status, and on a 200 without a JSON body. It times out after 10 seconds. `verify()` wraps it, logging the error and returning `False`.
+Use `verify_or_raise(token, service)` when a server should not blame the token for an auth server problem (`windfire-calendar` does, and answers `503`). It returns `True` for a valid token and `False` on 401/403, and raises `AuthServerError` on timeouts, connection or TLS errors, on any other status, and on a 200 without a JSON body. `verify()` wraps it, logging the error and returning `False`.
+
+Every request has a timeout of 3 seconds to connect and 10 seconds to read. Timeouts and connection errors are logged, and `authenticate()` / `verify()` return `None` / `False`.
+
+### Secure defaults
+
+TLS certificate verification is **on by default** (`VERIFY_SSL_CERTS` unset means `true`) and needs `ROOT_CA_PATH` to point at the Windfire Root CA. If `ROOT_CA_PATH` is unset or is not an existing file, `authenticate()` and `verify()` log an error naming `ROOT_CA_PATH` and return `None` / `False` without sending the request, and `verify_or_raise()` raises `AuthServerError`. Importing the client never fails because of this. Setting `VERIFY_SSL_CERTS=false` disables verification and logs a warning once, when the client is created.
 
 ## Configuration
 
@@ -47,8 +61,8 @@ The client resolves the auth server and its TLS behavior entirely from environme
 | `WINDFIRE_SECURITY_HOST` | — | When set (non-empty), overrides the host resolved from `ENVIRONMENT`. |
 | `WINDFIRE_SECURITY_PORT` | — | When set (non-empty), overrides the port resolved from `ENVIRONMENT`. Must be an integer; an invalid value is logged and ignored. |
 | `ENFORCE_AUTH_SERVER_HTTPS` | `true` | Whether to call the auth server over `https` or `http` (`1`/`true`/`yes`/`on` count as true). |
-| `VERIFY_SSL_CERTS` | `false` | Whether to verify the server's TLS certificate against `ROOT_CA_PATH`; when false, TLS verification is disabled entirely. |
-| `ROOT_CA_PATH` | — | Path to the Windfire Root CA bundle (produced by `windfire-security`'s `ssl/createRootCA.sh`), used when `VERIFY_SSL_CERTS=true`. |
+| `VERIFY_SSL_CERTS` | `true` | Whether to verify the server's TLS certificate against `ROOT_CA_PATH`; when false, TLS verification is disabled entirely and a warning is logged. |
+| `ROOT_CA_PATH` | — | Path to the Windfire Root CA bundle (produced by `windfire-security`'s `ssl/createRootCA.sh`). Required when `VERIFY_SSL_CERTS` is true: if it is unset or not an existing file, no request is sent (see [Secure defaults](#secure-defaults)). |
 
 Consumers such as `windfire-calendar` use `WINDFIRE_SECURITY_HOST` / `WINDFIRE_SECURITY_PORT` to select the auth server explicitly; the `ENVIRONMENT` mapping remains the fallback (e.g. for `run-auth-client.sh`). The resolved host/port and its source are logged at `DEBUG` level on startup.
 
@@ -70,6 +84,8 @@ This will:
 3. Install prerequisites, if not already installed.
 4. Run `testAuth.py` against the selected environment.
 
+The script sets `VERIFY_SSL_CERTS=true` (from `common.sh`) and `ROOT_CA_PATH=~/opt/windfire/ssl/truststore/WindfireRootCA.crt`, the same Root CA path that `windfire-security`'s test scripts use, so the server certificate is verified.
+
 The username defaults to `windfire` and the service to `windfire-calendar-srv` (both set in `common.sh`). Note that the **Test** option sets `ENVIRONMENT=test`, which has no host mapping in `authClient.py` — to use it, also export `WINDFIRE_SECURITY_HOST` / `WINDFIRE_SECURITY_PORT` before running the script.
 
 Related scripts: `createPythonVenv.sh`, `activatePythonVenv.sh`, `deactivatePythonVenv.sh` manage that venv (its name, `windfire-security-client`, is set in `common.sh` as `PYTHON_CLIENT_VIRTUAL_ENV`); `installPrereqs.sh` installs the dependencies pinned in `requirements.txt`; `common.sh` holds shared shell variables/functions (environment selection, credential prompts, terminal colors).
@@ -82,7 +98,7 @@ Related scripts: `createPythonVenv.sh`, `activatePythonVenv.sh`, `deactivatePyth
 
 The script uses the `windfire-security-client` venv's own Python, creating the venv first if it doesn't exist. This avoids PEP 668 errors from externally managed system Pythons (e.g. Homebrew), which refuse `pip install`. It then installs/upgrades `build` in the venv and runs `python -m build`.
 
-Package metadata lives in [pyproject.toml](pyproject.toml) (name `client`, version `1.0.0`, single runtime dependency `requests`).
+Package metadata lives in [pyproject.toml](pyproject.toml) (distribution `windfire-security-client`, version `1.1.0`, single runtime dependency `requests`; the import package stays `client`). The build produces `dist/windfire_security_client-1.1.0-py3-none-any.whl` and `dist/windfire_security_client-1.1.0.tar.gz`.
 
 ## Project structure
 
