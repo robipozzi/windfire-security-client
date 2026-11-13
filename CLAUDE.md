@@ -29,7 +29,7 @@ This creates/activates the `windfire-security-client` venv, installs prerequisit
 ./createModule.sh    # pip install build; python3 -m build -> produces dist/*.whl and dist/*.tar.gz
 ```
 
-Package metadata lives in `pyproject.toml` (name `client`, version `1.0.0`, single runtime dependency `requests`).
+Package metadata lives in `pyproject.toml` (name `client`, version `1.0.1`, single runtime dependency `requests`).
 
 ## Architecture
 
@@ -48,4 +48,4 @@ Two main methods, both POSTing JSON to the auth server and returning a simplifie
 
 `verify()` wraps `verify_or_raise(token, service) -> bool`, which returns `False` only on 401/403 and raises `AuthServerError` when the server gives no usable answer (connection/TLS error, other status, 200 without a JSON body). `windfire-calendar` calls it to return 503 instead of a misleading 401.
 
-Logging: `client/logger/loggerFactory.py` mirrors the logger used in `windfire-security` (same `ColorFormatter`, `LOG_LEVEL`/`DEFAULT_LOG_LEVEL` env resolution) but hardcodes its file handler to `$HOME/logs/windfire-security-client.log` — that directory must exist on the host before any client code runs, or the `TimedRotatingFileHandler` will fail to initialize. Always get loggers via `logger_factory.get_logger(<name>)`, never `logging.getLogger` directly.
+Logging: `client/logger/loggerFactory.py` mirrors the logger used in `windfire-security` (same `ColorFormatter`, `LOG_LEVEL`/`DEFAULT_LOG_LEVEL` env resolution) and writes its file handler to `windfire-security-client.log` in `WINDFIRE_SECURITY_CLIENT_LOG_DIR` (default `$HOME/logs`), creating the directory if missing. The handler is built at import time, so an unwritable directory (e.g. `/home/pi` under systemd `ProtectHome=read-only`) makes importing `client.authClient` fail — sandboxed consumers must point the variable at a writable path. Always get loggers via `logger_factory.get_logger(<name>)`, never `logging.getLogger` directly.
